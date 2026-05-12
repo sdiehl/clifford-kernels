@@ -6,5 +6,4 @@ __pycache__/
 .ruff_cache/
 dist/
 build/
-uv.lock
 .DS_Store
