@@ -1,6 +1,6 @@
 import torch
 
-from tiny_cayley import dense_to_sparse_cayley, sparse_gp
+from cayley import dense_to_sparse_cayley, sparse_gp
 
 
 def _popcount(n: int) -> int:
