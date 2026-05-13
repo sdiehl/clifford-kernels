@@ -1,6 +1,6 @@
 # cayley-triton
 
-A tiny Triton kernel for the sparse [Cayley table](https://en.wikipedia.org/wiki/Cayley_table) contraction (the geometric product in Clifford algebras), differentiable, signature-agnostic. Part of my ongoing work on transformers over geometric algebras.
+A tiny Triton kernel for the sparse [Cayley table](https://en.wikipedia.org/wiki/Cayley_table) contraction (the geometric product in Clifford algebras), differentiable, signature-agnostic. Part of my ongoing work on transformers over Clifford algebras.
 
 The Cayley tensor $`C \in \mathbb{R}^{n \times n \times n}`$ of $`\mathrm{Cl}(p,q,r)`$ with $`n = 2^{p+q+r}`$ is roughly 90% zeros, so the geometric product $`(x * y)_k = \sum_{i,j} x_i y_j C_{ijk}`$ wastes most of its work in a dense Einstein summation. This repo extracts the nonzero entries as `(ia, ib, ic, sign)` and runs a small Triton kernel that only touches them. Forward and backward both compile to the same kernel walking permuted index arrays, so you can train through it.
 
