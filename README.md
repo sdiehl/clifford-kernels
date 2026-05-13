@@ -19,8 +19,8 @@ ia, ib, ic, sign = sparse_cayley_from_sig(8, 0, 0)  # Cl(8,0,0), 256 blades
 
 x = torch.randn(32, 256, device="cuda", requires_grad=True)
 y = torch.randn(32, 256, device="cuda", requires_grad=True)
-out = sparse_gp(x, y, ia, ib, ic, sign)            # shape (32, 256)
-out.sum().backward()                                # backward kernel too
+out = sparse_gp(x, y, ia, ib, ic, sign)  # shape (32, 256)
+out.sum().backward()                     # backward kernel too
 ```
 
 For algebras where you already have a dense Cayley tensor (e.g. coming from another GA library), `dense_to_sparse_cayley(C)` is the alternative path; `sparse_cayley_from_sig(p, q, r)` is preferable whenever you only need the kernel-ready arrays.
