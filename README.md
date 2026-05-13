@@ -2,20 +2,20 @@
 
 A tiny triton kernel for the sparse [Cayley table](https://en.wikipedia.org/wiki/Cayley_table) contraction (the geometric product in clifford algebras). Part of my ongoing work on transformers over geometric algebras.
 
-The Cayley tensor $`C \in \mathbb{R}^{n \times n \times n}`$ of $`\mathrm{Cl}(p,q,r)`$ with $`n = 2^{p+q+r}`$ is roughly 90% zeros, so the geometric product $`(x * y)_k = \sum_{i,j} x_i y_j C_{ijk}`$ wastes most of its work in a dense einsum. This repo extracts the nonzero entries as `(ia, ib, ic, sign)` and runs a small Triton kernel that only touches them.
+The Cayley tensor $`C \in \mathbb{R}^{n \times n \times n}`$ of $`\mathrm{Cl}(p,q,r)`$ with $`n = 2^{p+q+r}`$ is roughly 90% zeros, so the geometric product $`(x * y)_k = \sum_{i,j} x_i y_j C_{ijk}`$ wastes most of its work in a dense Einstein summation. This repo extracts the nonzero entries as `(ia, ib, ic, sign)` and runs a small Triton kernel that only touches them.
 
 ```
 uv sync
 uv run pytest
 ```
 
-The default dense einsum spends ~90% of its FLOPs multiplying by structural zeros; this kernel skips them entirely and writes results with a single fused atomic-add per nonzero, so memory traffic and arithmetic both scale with the sparsity rather than $n^3$, which matters in training loops where the geometric product runs on every layer of every forward and backward pass and quickly dominates step time.
+The default dense einsum spends ~90% of its FLOPs multiplying by structural zeros. So we built this custom kernel that skips them entirely and writes results with a single fused atomic-add per nonzero, so memory traffic and arithmetic both scale with the sparsity rather than $n^3$, which matters in training loops where the geometric product runs on every layer of every forward and backward pass and quickly dominates step time.
 
 ```python
 import torch
 from cayley import dense_to_sparse_cayley, sparse_gp
 
-# Build a dense Cayley tensor however you like; for Cl(3,0,1) you can
+# Build a dense Cayley tensor however you like. For Cl(3,0,1) you can
 # lift the construction from any Clifford-algebra library, or write your own.
 C = build_cayley(p=3, q=0, r=1)  # shape (16, 16, 16)
 ia, ib, ic, sign = dense_to_sparse_cayley(C)

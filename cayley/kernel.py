@@ -46,7 +46,7 @@ if _HAS_TRITON:
 
             # Atomic add since multiple k values may target the same ic, and
             # different programs may write to the same (batch, ic) slot only if
-            # we partitioned by k; here we partition by batch, so within a
+            # we partitioned by k. Here we partition by batch, so within a
             # program a plain load/store would race across k. We accumulate
             # safely via atomic_add on the output element.
             tl.atomic_add(out_ptr + offs * n_blades + ic, prod, mask=mask)
@@ -61,7 +61,7 @@ def _reference_sparse_gp(
     sign: Tensor,
 ) -> Tensor:
     # scatter_add reference used when Triton is unavailable (e.g. macOS) and
-    # also when inputs are on CPU; matches the kernel semantics exactly.
+    # also when inputs are on CPU. Matches the kernel semantics exactly.
     n_blades = x.shape[-1]
     batch = x.shape[0]
     ia_l = ia.long()
