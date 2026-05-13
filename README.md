@@ -13,7 +13,7 @@ The default dense einsum spends ~90% of its FLOPs multiplying by structural zero
 
 ```python
 import torch
-from cayley import dense_to_sparse_cayley, sparse_gp
+from cayley import dense_to_sparse_cayley, sparse_cayley_from_sig, sparse_gp
 
 # Build a dense Cayley tensor however you like. For Cl(3,0,1) you can
 # lift the construction from any Clifford-algebra library, or write your own.
@@ -24,6 +24,19 @@ x = torch.randn(32, 16, device="cuda")
 y = torch.randn(32, 16, device="cuda")
 out = sparse_gp(x, y, ia, ib, ic, sign)  # shape (32, 16)
 ```
+
+For larger algebras (e.g. $`\mathrm{Cl}(8,0,0)`$ with $`n = 256`$), materialising the full $`n \times n \times n`$ Cayley tensor costs hundreds of MB. The `sparse_cayley_from_sig` constructor builds the table combinatorially from $`(p, q, r)`$ directly, never allocating the dense form:
+
+```python
+from cayley import sparse_cayley_from_sig, sparse_gp
+
+ia, ib, ic, sign = sparse_cayley_from_sig(8, 0, 0)  # Cl(8,0,0), 256 blades
+x = torch.randn(32, 256, device="cuda")
+y = torch.randn(32, 256, device="cuda")
+out = sparse_gp(x, y, ia, ib, ic, sign)
+```
+
+`dense_to_sparse_cayley` stays as the right tool when you already have a dense tensor lying around (e.g. coming from another GA library); `sparse_cayley_from_sig` is preferable whenever you only need the kernel-ready arrays.
 
 Triton compiles the kernel on first launch and caches the result. Set `TRITON_CACHE_DIR` to control where the cache lives if the default is inconvenient.
 
