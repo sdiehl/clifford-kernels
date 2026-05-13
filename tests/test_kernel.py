@@ -129,3 +129,40 @@ def test_oct():
     # 256^3 dense allocation that dense_to_sparse_cayley would otherwise pay.
     _check_constructors_agree(8, 0, 0)
     _check_sparse_only(8, 0, 0)
+
+
+def _check_gradient(p: int, q: int, r: int = 0, batch: int = 3, seed: int = 0) -> None:
+    torch.manual_seed(seed)
+    C = cayley_dense(p, q, r, dtype=torch.float64)
+    n = C.shape[0]
+    ia, ib, ic, sign = sparse_cayley_from_sig(p, q, r, dtype=torch.float64)
+
+    x_ref = torch.randn(batch, n, dtype=torch.float64)
+    y_ref = torch.randn(batch, n, dtype=torch.float64)
+    dout = torch.randn(batch, n, dtype=torch.float64)
+
+    x_s = x_ref.clone().requires_grad_(True)
+    y_s = y_ref.clone().requires_grad_(True)
+    out_s = sparse_gp(x_s, y_s, ia, ib, ic, sign)
+    (dx_s, dy_s) = torch.autograd.grad(out_s, (x_s, y_s), grad_outputs=dout)
+
+    x_d = x_ref.clone().requires_grad_(True)
+    y_d = y_ref.clone().requires_grad_(True)
+    out_d = torch.einsum("bi,bj,ijk->bk", x_d, y_d, C)
+    (dx_d, dy_d) = torch.autograd.grad(out_d, (x_d, y_d), grad_outputs=dout)
+
+    assert torch.allclose(out_s, out_d, atol=1e-10)
+    assert torch.allclose(dx_s, dx_d, atol=1e-10)
+    assert torch.allclose(dy_s, dy_d, atol=1e-10)
+
+
+def test_grad_pga():
+    _check_gradient(3, 0, 1)
+
+
+def test_grad_sta():
+    _check_gradient(1, 3, 0)
+
+
+def test_grad_cma():
+    _check_gradient(2, 4, 0)

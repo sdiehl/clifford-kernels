@@ -74,7 +74,7 @@ def _reference_sparse_gp(
     return out
 
 
-def sparse_gp(
+def _sparse_gp_forward(
     x: Tensor,
     y: Tensor,
     ia: Tensor,
@@ -82,15 +82,8 @@ def sparse_gp(
     ic: Tensor,
     sign: Tensor,
 ) -> Tensor:
-    if x.shape != y.shape:
-        raise ValueError(f"x and y must match, got {tuple(x.shape)} vs {tuple(y.shape)}")
-    if x.ndim != 2:
-        raise ValueError(f"expected (batch, n_blades) inputs, got {tuple(x.shape)}")
-    if not (ia.shape == ib.shape == ic.shape == sign.shape):
-        raise ValueError("ia, ib, ic, sign must all have the same shape")
-
-    # Fall back to torch on any path that cannot run the kernel: missing
-    # triton, non-CUDA tensors, or empty sparsity (nothing to launch).
+    # Computes out[b, ic[k]] += sign[k] * x[b, ia[k]] * y[b, ib[k]].
+    # Forward and both backward passes share this shape with permuted indices.
     if (not _HAS_TRITON) or (not x.is_cuda) or ia.numel() == 0:
         return _reference_sparse_gp(x, y, ia, ib, ic, sign)
 
@@ -122,3 +115,39 @@ def sparse_gp(
         BLOCK_BATCH=BLOCK_BATCH,
     )
     return out
+
+
+class _SparseGPFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, y, ia, ib, ic, sign):
+        ctx.save_for_backward(x, y, ia, ib, ic, sign)
+        return _sparse_gp_forward(x, y, ia, ib, ic, sign)
+
+    @staticmethod
+    def backward(ctx, dout):
+        x, y, ia, ib, ic, sign = ctx.saved_tensors
+        dx = dy = None
+        if ctx.needs_input_grad[0]:
+            # dx[ia] += sign * y[ib] * dout[ic]: same kernel, indices permuted.
+            dx = _sparse_gp_forward(y, dout, ib, ic, ia, sign)
+        if ctx.needs_input_grad[1]:
+            dy = _sparse_gp_forward(x, dout, ia, ic, ib, sign)
+        return dx, dy, None, None, None, None
+
+
+def sparse_gp(
+    x: Tensor,
+    y: Tensor,
+    ia: Tensor,
+    ib: Tensor,
+    ic: Tensor,
+    sign: Tensor,
+) -> Tensor:
+    if x.shape != y.shape:
+        raise ValueError(f"x and y must match, got {tuple(x.shape)} vs {tuple(y.shape)}")
+    if x.ndim != 2:
+        raise ValueError(f"expected (batch, n_blades) inputs, got {tuple(x.shape)}")
+    if not (ia.shape == ib.shape == ic.shape == sign.shape):
+        raise ValueError("ia, ib, ic, sign must all have the same shape")
+
+    return _SparseGPFunction.apply(x, y, ia, ib, ic, sign)
