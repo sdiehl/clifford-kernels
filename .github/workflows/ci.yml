@@ -116,4 +116,4 @@ jobs:
         run: cargo install --git https://github.com/NVlabs/cuda-oxide.git --rev 76a1d8840e5360207943805d036d8e299bda7728 cargo-oxide
 
       - name: cargo oxide build
-        run: cargo oxide build
+        run: cargo oxide build --features gpu

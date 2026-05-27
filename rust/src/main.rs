@@ -1,4 +1,4 @@
-#[cfg(target_os = "linux")]
+#[cfg(feature = "gpu")]
 mod gpu {
     use cayley_oxide::{reference, sig};
     use cuda_core::{CudaContext, DeviceBuffer, LaunchConfig};
@@ -152,13 +152,13 @@ mod gpu {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(feature = "gpu")]
 fn main() {
     gpu::run();
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(feature = "gpu"))]
 fn main() {
-    eprintln!("cayley-oxide requires Linux (cuda-oxide is Linux-only). cargo test still works.");
+    eprintln!("cayley-oxide binary requires --features gpu (Linux + CUDA only).");
     std::process::exit(1);
 }

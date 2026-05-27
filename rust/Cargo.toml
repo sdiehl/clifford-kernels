@@ -7,7 +7,16 @@ description = "Sparse Cayley table contraction kernel in Rust via cuda-oxide"
 
 [workspace]
 
-[target.'cfg(target_os = "linux")'.dependencies]
-cuda-device = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728" }
-cuda-host   = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728" }
-cuda-core   = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728" }
+[features]
+default = []
+gpu = ["dep:cuda-device", "dep:cuda-host", "dep:cuda-core"]
+
+[dependencies]
+cuda-device = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728", optional = true }
+cuda-host   = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728", optional = true }
+cuda-core   = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728", optional = true }
+
+[[bin]]
+name = "cayley-oxide"
+path = "src/main.rs"
+required-features = ["gpu"]
