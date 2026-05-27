@@ -67,9 +67,7 @@ def sparse_cayley_from_sig(
     )
 
 
-def dense_cayley_from_sig(
-    p: int, q: int, r: int = 0, *, dtype: mx.Dtype = mx.float32
-) -> mx.array:
+def dense_cayley_from_sig(p: int, q: int, r: int = 0, *, dtype: mx.Dtype = mx.float32) -> mx.array:
     n = 1 << (p + q + r)
     arr = [[[0 for _ in range(n)] for _ in range(n)] for _ in range(n)]
     for a, b, c, s in _cayley_entries(p, q, r):
