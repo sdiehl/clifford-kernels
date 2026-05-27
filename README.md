@@ -4,9 +4,9 @@ Sparse [Cayley table](https://en.wikipedia.org/wiki/Cayley_table) contraction ke
 
 Two implementations of the same kernel:
 
-- [**pytorch/**](pytorch/) — a Triton kernel, differentiable through `torch.autograd`, with a CPU fallback. The original implementation; covers forward and backward.
-- [**rust/**](rust/) — the same kernel written in pure Rust using [cuda-oxide](https://nvlabs.github.io/cuda-oxide/), NVIDIA Labs' Rust-to-PTX compiler. Forward + backward host helper, no autograd integration.
+- [**pytorch/**](pytorch/) — a Triton kernel, differentiable through `torch.autograd`, with a CPU fallback
+- [**rust/**](rust/) — the same kernel written in pure Rust using [cuda-oxide](https://nvlabs.github.io/cuda-oxide/) NVidia's Rust-to-PTX compiler
 
 ## License
 
-MIT. See [LICENSE](LICENSE.md).
+This project is licensed under the MIT License. See the [LICENSE](LICENSE.md) file for details.
