@@ -1,0 +1,13 @@
+[package]
+name = "cayley-oxide"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Sparse Cayley table contraction kernel in Rust via cuda-oxide"
+
+[workspace]
+
+[target.'cfg(target_os = "linux")'.dependencies]
+cuda-device = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728" }
+cuda-host   = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728" }
+cuda-core   = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728" }

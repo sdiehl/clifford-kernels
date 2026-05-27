@@ -10,8 +10,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
+  python-lint:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pytorch
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
@@ -21,8 +24,11 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
 
-  test:
+  python-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pytorch
     strategy:
       fail-fast: false
       matrix:
@@ -36,8 +42,11 @@ jobs:
       - run: uv sync
       - run: uv run pytest -q
 
-  build:
+  python-build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pytorch
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
@@ -47,4 +56,64 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: pytorch/dist/
+
+  rust-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+      - run: cargo fmt --check
+      - run: cargo test --lib --tests
+
+  rust-build:
+    runs-on: ubuntu-latest
+    needs: rust-test
+    defaults:
+      run:
+        working-directory: rust
+    env:
+      CUDA_OXIDE_LLC: /usr/bin/llc-21
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM 21 and Clang 21
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lsb-release wget software-properties-common gnupg
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 21
+          sudo apt-get install -y llvm-21 libclang-21-dev libclang-cpp21-dev libclang-common-21-dev
+          sudo update-alternatives --install /usr/bin/clang   clang   /usr/bin/clang-21   100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
+
+      - name: Install CUDA Toolkit 12
+        uses: Jimver/cuda-toolkit@v0.2.19
+        with:
+          cuda: '12.5.0'
+          method: 'network'
+          sub-packages: '["nvcc", "cudart"]'
+
+      - name: Install pinned nightly toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-04-03
+          components: rust-src, rustc-dev, rust-analyzer, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+          key: cuda-oxide-build
+
+      - name: Install cargo-oxide
+        run: cargo install --git https://github.com/NVlabs/cuda-oxide.git --rev 76a1d8840e5360207943805d036d8e299bda7728 cargo-oxide
+
+      - name: cargo oxide build
+        run: cargo oxide build

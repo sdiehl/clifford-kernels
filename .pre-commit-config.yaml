@@ -14,4 +14,20 @@ repos:
     hooks:
       - id: ruff
         args: [--fix]
+        files: ^pytorch/
       - id: ruff-format
+        files: ^pytorch/
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt (rust)
+        entry: bash -c 'cd rust && cargo fmt -- --check'
+        language: system
+        files: ^rust/.*\.rs$
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy (rust lib + tests)
+        entry: bash -c 'cd rust && cargo clippy --lib --tests --no-deps -- -D warnings'
+        language: system
+        files: ^rust/.*\.rs$
+        pass_filenames: false
