@@ -112,3 +112,10 @@ def test_grad_sta():
 
 def test_grad_cma():
     _check_gradient(2, 4, 0)
+
+
+def test_registered_as_custom_op():
+    # The op should be reachable via torch.ops, confirming the
+    # torch.library.custom_op registration succeeded.
+    assert hasattr(torch.ops, "cayley")
+    assert hasattr(torch.ops.cayley, "sparse_gp")

@@ -74,7 +74,8 @@ def _reference_sparse_gp(
     return out
 
 
-def _sparse_gp_forward(
+@torch.library.custom_op("cayley::sparse_gp", mutates_args=())
+def _sparse_gp_op(
     x: Tensor,
     y: Tensor,
     ia: Tensor,
@@ -117,22 +118,33 @@ def _sparse_gp_forward(
     return out
 
 
-class _SparseGPFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, x, y, ia, ib, ic, sign):
-        ctx.save_for_backward(x, y, ia, ib, ic, sign)
-        return _sparse_gp_forward(x, y, ia, ib, ic, sign)
+@_sparse_gp_op.register_fake
+def _sparse_gp_fake(x, y, ia, ib, ic, sign):
+    # Shape/dtype/device inference for torch.compile and fake-tensor tracing.
+    return torch.empty_like(x)
 
-    @staticmethod
-    def backward(ctx, dout):
-        x, y, ia, ib, ic, sign = ctx.saved_tensors
-        dx = dy = None
-        if ctx.needs_input_grad[0]:
-            # dx[ia] += sign * y[ib] * dout[ic]: same kernel, indices permuted.
-            dx = _sparse_gp_forward(y, dout, ib, ic, ia, sign)
-        if ctx.needs_input_grad[1]:
-            dy = _sparse_gp_forward(x, dout, ia, ic, ib, sign)
-        return dx, dy, None, None, None, None
+
+def _sparse_gp_setup_context(ctx, inputs, output):
+    x, y, ia, ib, ic, sign = inputs
+    ctx.save_for_backward(x, y, ia, ib, ic, sign)
+
+
+def _sparse_gp_backward(ctx, dout):
+    x, y, ia, ib, ic, sign = ctx.saved_tensors
+    dx = dy = None
+    if ctx.needs_input_grad[0]:
+        # dx[ia] += sign * y[ib] * dout[ic]: same op, indices permuted.
+        dx = torch.ops.cayley.sparse_gp(y, dout, ib, ic, ia, sign)
+    if ctx.needs_input_grad[1]:
+        dy = torch.ops.cayley.sparse_gp(x, dout, ia, ic, ib, sign)
+    return dx, dy, None, None, None, None
+
+
+torch.library.register_autograd(
+    "cayley::sparse_gp",
+    _sparse_gp_backward,
+    setup_context=_sparse_gp_setup_context,
+)
 
 
 def sparse_gp(
@@ -150,4 +162,4 @@ def sparse_gp(
     if not (ia.shape == ib.shape == ic.shape == sign.shape):
         raise ValueError("ia, ib, ic, sign must all have the same shape")
 
-    return _SparseGPFunction.apply(x, y, ia, ib, ic, sign)
+    return torch.ops.cayley.sparse_gp(x, y, ia, ib, ic, sign)
