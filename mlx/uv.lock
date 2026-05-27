@@ -18,13 +18,13 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "mlx", specifier = ">=0.20" }]
+requires-dist = [{ name = "mlx", specifier = ">=0.31" }]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "numpy" },
+    { name = "numpy", specifier = ">=2.0" },
     { name = "pytest", specifier = ">=8.0" },
-    { name = "ruff", specifier = ">=0.8" },
+    { name = "ruff", specifier = ">=0.15" },
 ]
 
 [[package]]

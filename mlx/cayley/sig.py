@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 
 import mlx.core as mx
+import numpy as np
 
 
 def _popcount(n: int) -> int:
@@ -53,12 +54,7 @@ def _cayley_entries(p: int, q: int, r: int) -> Iterator[tuple[int, int, int, int
 def sparse_cayley_from_sig(
     p: int, q: int, r: int = 0, *, dtype: mx.Dtype = mx.float32
 ) -> tuple[mx.array, mx.array, mx.array, mx.array]:
-    ia_l, ib_l, ic_l, sgn_l = [], [], [], []
-    for a, b, c, s in _cayley_entries(p, q, r):
-        ia_l.append(a)
-        ib_l.append(b)
-        ic_l.append(c)
-        sgn_l.append(s)
+    ia_l, ib_l, ic_l, sgn_l = zip(*_cayley_entries(p, q, r), strict=True)
     return (
         mx.array(ia_l, dtype=mx.int32),
         mx.array(ib_l, dtype=mx.int32),
@@ -69,7 +65,7 @@ def sparse_cayley_from_sig(
 
 def dense_cayley_from_sig(p: int, q: int, r: int = 0, *, dtype: mx.Dtype = mx.float32) -> mx.array:
     n = 1 << (p + q + r)
-    arr = [[[0 for _ in range(n)] for _ in range(n)] for _ in range(n)]
+    arr = np.zeros((n, n, n), dtype=np.float32)
     for a, b, c, s in _cayley_entries(p, q, r):
-        arr[a][b][c] = s
+        arr[a, b, c] = s
     return mx.array(arr, dtype=dtype)

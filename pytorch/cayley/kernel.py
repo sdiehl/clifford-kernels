@@ -8,7 +8,7 @@ try:
     import triton.language as tl
 
     _HAS_TRITON = True
-except Exception:
+except ImportError:
     _HAS_TRITON = False
 
 
@@ -28,8 +28,6 @@ if _HAS_TRITON:
         n_blades,
         BLOCK_BATCH: tl.constexpr,
     ):
-        # One program handles a contiguous slice of batch indices and walks the
-        # entire list of nonzero Cayley entries, accumulating into out.
         pid = tl.program_id(axis=0)
         offs = pid * BLOCK_BATCH + tl.arange(0, BLOCK_BATCH)
         mask = offs < batch_size
@@ -44,11 +42,7 @@ if _HAS_TRITON:
             y = tl.load(y_ptr + offs * n_blades + ib, mask=mask, other=0.0)
             prod = s * x * y
 
-            # Atomic add since multiple k values may target the same ic, and
-            # different programs may write to the same (batch, ic) slot only if
-            # we partitioned by k. Here we partition by batch, so within a
-            # program a plain load/store would race across k. We accumulate
-            # safely via atomic_add on the output element.
+            # Atomic because multiple k can target the same ic within a program.
             tl.atomic_add(out_ptr + offs * n_blades + ic, prod, mask=mask)
 
 
@@ -60,8 +54,6 @@ def _reference_sparse_gp(
     ic: Tensor,
     sign: Tensor,
 ) -> Tensor:
-    # scatter_add reference used when Triton is unavailable (e.g. macOS) and
-    # also when inputs are on CPU. Matches the kernel semantics exactly.
     n_blades = x.shape[-1]
     batch = x.shape[0]
     ia_l = ia.long()
@@ -83,8 +75,6 @@ def _sparse_gp_op(
     ic: Tensor,
     sign: Tensor,
 ) -> Tensor:
-    # Computes out[b, ic[k]] += sign[k] * x[b, ia[k]] * y[b, ib[k]].
-    # Forward and both backward passes share this shape with permuted indices.
     if (not _HAS_TRITON) or (not x.is_cuda) or ia.numel() == 0:
         return _reference_sparse_gp(x, y, ia, ib, ic, sign)
 
@@ -120,7 +110,6 @@ def _sparse_gp_op(
 
 @_sparse_gp_op.register_fake
 def _sparse_gp_fake(x, y, ia, ib, ic, sign):
-    # Shape/dtype/device inference for torch.compile and fake-tensor tracing.
     return torch.empty_like(x)
 
 
@@ -133,7 +122,6 @@ def _sparse_gp_backward(ctx, dout):
     x, y, ia, ib, ic, sign = ctx.saved_tensors
     dx = dy = None
     if ctx.needs_input_grad[0]:
-        # dx[ia] += sign * y[ib] * dout[ic]: same op, indices permuted.
         dx = torch.ops.cayley.sparse_gp(y, dout, ib, ic, ia, sign)
     if ctx.needs_input_grad[1]:
         dy = torch.ops.cayley.sparse_gp(x, dout, ia, ic, ib, sign)

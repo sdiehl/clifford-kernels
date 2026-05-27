@@ -17,8 +17,6 @@ def _check_kernel_matches_einsum(
     batch: int = 4,
     seed: int = 0,
 ) -> None:
-    # For larger signatures the dense reference einsum is expensive but still
-    # tractable on CPU; we keep the batch tiny to stay under a second at N=8.
     torch.manual_seed(seed)
     C = dense_cayley_from_sig(p, q, r)
     n = C.shape[0]
@@ -35,7 +33,6 @@ def _check_kernel_matches_einsum(
 
 
 def _sort_table(ia, ib, ic, sign):
-    # Sort entries by (ia, ib) so independently-constructed tables can be compared.
     keys = ia.to(torch.int64) * (1 << 32) + ib.to(torch.int64)
     order = torch.argsort(keys)
     return ia[order], ib[order], ic[order], sign[order]
@@ -45,7 +42,7 @@ def _check_constructors_agree(p: int, q: int, r: int = 0) -> None:
     C = dense_cayley_from_sig(p, q, r)
     dense = _sort_table(*dense_to_sparse_cayley(C))
     direct = _sort_table(*sparse_cayley_from_sig(p, q, r))
-    for a, b in zip(dense, direct, strict=False):
+    for a, b in zip(dense, direct, strict=True):
         assert torch.equal(a.to(b.dtype), b)
 
 
@@ -65,14 +62,11 @@ def test_sta():
 
 
 def test_cma():
-    # Cl(2,4,0): conformal Minkowski / twistor algebra. 64 blades.
     _check_constructors_agree(2, 4, 0)
     _check_kernel_matches_einsum(2, 4, 0, use_direct_sparse=True)
 
 
 def test_oct():
-    # Cl(8,0,0): 256 blades. The direct-from-sig constructor avoids the
-    # 256^3 dense allocation that dense_to_sparse_cayley would otherwise pay.
     _check_constructors_agree(8, 0, 0)
     _check_kernel_matches_einsum(8, 0, 0, use_direct_sparse=True)
 
@@ -115,7 +109,5 @@ def test_grad_cma():
 
 
 def test_registered_as_custom_op():
-    # The op should be reachable via torch.ops, confirming the
-    # torch.library.custom_op registration succeeded.
     assert hasattr(torch.ops, "cayley")
     assert hasattr(torch.ops.cayley, "sparse_gp")

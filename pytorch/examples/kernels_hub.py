@@ -1,9 +1,5 @@
 import torch
-
-try:
-    from kernels import get_kernel
-except ImportError:
-    raise SystemExit("install with: pip install kernels") from None
+from kernels import get_kernel
 
 cayley = get_kernel("sdiehl/cayley-triton")
 

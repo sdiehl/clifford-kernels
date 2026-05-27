@@ -32,8 +32,6 @@ def _basis_sign(i: int, p: int, q: int) -> int:
 
 
 def _metric_sign(mask: int, p: int, q: int, dim: int) -> int:
-    # Product of basis-vector signs for every set bit of `mask`; zero if any
-    # bit lands in the null block.
     acc = 1
     for i in range(dim):
         if (mask >> i) & 1:
@@ -45,9 +43,6 @@ def _metric_sign(mask: int, p: int, q: int, dim: int) -> int:
 
 
 def _cayley_entries(p: int, q: int, r: int) -> Iterator[tuple[int, int, int, int]]:
-    # Yields (ia, ib, ic, sign) for every nonzero entry of the Cl(p,q,r)
-    # geometric-product Cayley tensor. Iterates the n^2 blade-mask pairs and
-    # skips entries that fall into the null block.
     dim = p + q + r
     n = 1 << dim
     for a in range(n):
@@ -65,18 +60,7 @@ def sparse_cayley_from_sig(
     *,
     dtype: torch.dtype = torch.float32,
 ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
-    # Direct combinatorial construction of the sparse Cayley table for Cl(p,q,r).
-    # Emits (ia, ib, ic, sign) without materialising the dense (n,n,n) tensor
-    # first; at N=8 this avoids a 256 MB float32 allocation.
-    ia_l: list[int] = []
-    ib_l: list[int] = []
-    ic_l: list[int] = []
-    sgn_l: list[int] = []
-    for a, b, c, s in _cayley_entries(p, q, r):
-        ia_l.append(a)
-        ib_l.append(b)
-        ic_l.append(c)
-        sgn_l.append(s)
+    ia_l, ib_l, ic_l, sgn_l = zip(*_cayley_entries(p, q, r), strict=True)
     return (
         torch.tensor(ia_l, dtype=torch.int32),
         torch.tensor(ib_l, dtype=torch.int32),
@@ -92,9 +76,6 @@ def dense_cayley_from_sig(
     *,
     dtype: torch.dtype = torch.float32,
 ) -> Tensor:
-    # Dense (n,n,n) Cayley tensor for Cl(p,q,r). Useful as a reference for the
-    # einsum baseline; prefer sparse_cayley_from_sig when only the kernel
-    # arrays are needed.
     n = 1 << (p + q + r)
     C = torch.zeros(n, n, n, dtype=dtype)
     for a, b, c, s in _cayley_entries(p, q, r):

@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/pytorch"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-dev:
+        patterns: ["pytest", "ruff", "pre-commit"]
+      python-runtime:
+        patterns: ["torch", "triton", "jaxtyping"]
+
+  - package-ecosystem: "uv"
+    directory: "/mlx"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-dev:
+        patterns: ["pytest", "ruff", "numpy"]
+      mlx:
+        patterns: ["mlx*"]
+
+  - package-ecosystem: "cargo"
+    directory: "/rust"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

@@ -5,14 +5,14 @@ description = "Sparse Cayley table contraction in MLX (pure + Metal kernel)"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
-  "mlx>=0.20",
+  "mlx>=0.31",
 ]
 
 [dependency-groups]
 dev = [
   "pytest>=8.0",
-  "ruff>=0.8",
-  "numpy",
+  "ruff>=0.15",
+  "numpy>=2.0",
 ]
 
 [build-system]

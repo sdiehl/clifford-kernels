@@ -1,16 +1,7 @@
 import mlx.core as mx
 
 from cayley import sparse_cayley_from_sig
-
-
-def sparse_gp(x, y, ia, ib, ic, sign, n_blades):
-    # Gather contributions for each (k, batch), then sum into out[:, ic[k]]
-    # via a one-hot matmul. MLX has no scatter_add primitive; the one-hot trick
-    # is the idiomatic stand-in and fuses cleanly under mx.compile.
-    contrib = sign * x[:, ia] * y[:, ib]
-    one_hot = (ic[:, None] == mx.arange(n_blades)[None, :]).astype(x.dtype)
-    return contrib @ one_hot
-
+from cayley.pure import sparse_gp
 
 ia, ib, ic, sign = sparse_cayley_from_sig(3, 0, 1)
 n_blades = 16
