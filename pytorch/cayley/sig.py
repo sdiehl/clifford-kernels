@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 import torch
 from torch import Tensor
 
@@ -42,6 +44,20 @@ def _metric_sign(mask: int, p: int, q: int, dim: int) -> int:
     return acc
 
 
+def _cayley_entries(p: int, q: int, r: int) -> Iterator[tuple[int, int, int, int]]:
+    # Yields (ia, ib, ic, sign) for every nonzero entry of the Cl(p,q,r)
+    # geometric-product Cayley tensor. Iterates the n^2 blade-mask pairs and
+    # skips entries that fall into the null block.
+    dim = p + q + r
+    n = 1 << dim
+    for a in range(n):
+        for b in range(n):
+            m = _metric_sign(a & b, p, q, dim)
+            if m == 0:
+                continue
+            yield a, b, a ^ b, _swap_sign(a, b, dim) * m
+
+
 def sparse_cayley_from_sig(
     p: int,
     q: int,
@@ -50,28 +66,37 @@ def sparse_cayley_from_sig(
     dtype: torch.dtype = torch.float32,
 ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
     # Direct combinatorial construction of the sparse Cayley table for Cl(p,q,r).
-    # Iterates over the (n^2) blade-mask pairs and emits (ia, ib, ic, sign) without
-    # materialising the dense (n,n,n) tensor first. Cheap at small N, but at N=8
-    # this avoids a 256 MB float32 allocation that dense_to_sparse_cayley would
-    # otherwise need.
-    dim = p + q + r
-    n = 1 << dim
-    ia_list: list[int] = []
-    ib_list: list[int] = []
-    ic_list: list[int] = []
-    sgn_list: list[int] = []
-    for a in range(n):
-        for b in range(n):
-            m = _metric_sign(a & b, p, q, dim)
-            if m == 0:
-                continue
-            s = _swap_sign(a, b, dim) * m
-            ia_list.append(a)
-            ib_list.append(b)
-            ic_list.append(a ^ b)
-            sgn_list.append(s)
-    ia = torch.tensor(ia_list, dtype=torch.int32)
-    ib = torch.tensor(ib_list, dtype=torch.int32)
-    ic = torch.tensor(ic_list, dtype=torch.int32)
-    sign = torch.tensor(sgn_list, dtype=dtype)
-    return ia, ib, ic, sign
+    # Emits (ia, ib, ic, sign) without materialising the dense (n,n,n) tensor
+    # first; at N=8 this avoids a 256 MB float32 allocation.
+    ia_l: list[int] = []
+    ib_l: list[int] = []
+    ic_l: list[int] = []
+    sgn_l: list[int] = []
+    for a, b, c, s in _cayley_entries(p, q, r):
+        ia_l.append(a)
+        ib_l.append(b)
+        ic_l.append(c)
+        sgn_l.append(s)
+    return (
+        torch.tensor(ia_l, dtype=torch.int32),
+        torch.tensor(ib_l, dtype=torch.int32),
+        torch.tensor(ic_l, dtype=torch.int32),
+        torch.tensor(sgn_l, dtype=dtype),
+    )
+
+
+def dense_cayley_from_sig(
+    p: int,
+    q: int,
+    r: int = 0,
+    *,
+    dtype: torch.dtype = torch.float32,
+) -> Tensor:
+    # Dense (n,n,n) Cayley tensor for Cl(p,q,r). Useful as a reference for the
+    # einsum baseline; prefer sparse_cayley_from_sig when only the kernel
+    # arrays are needed.
+    n = 1 << (p + q + r)
+    C = torch.zeros(n, n, n, dtype=dtype)
+    for a, b, c, s in _cayley_entries(p, q, r):
+        C[a, b, c] = s
+    return C

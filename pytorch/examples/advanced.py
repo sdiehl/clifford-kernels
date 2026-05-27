@@ -2,38 +2,13 @@ import time
 
 import torch
 
-from cayley import dense_to_sparse_cayley, sparse_gp
-
-
-def build_cayley(p, q, r):
-    d = p + q + r
-    n = 1 << d
-    C = torch.zeros(n, n, n)
-    for a in range(n):
-        for b in range(n):
-            s, keep = 1, True
-            for j in range(d):
-                if (b >> j) & 1:
-                    above = (a >> (j + 1)) & ((1 << (d - j - 1)) - 1)
-                    if bin(above).count("1") & 1:
-                        s = -s
-            for i in range(d):
-                if (a >> i) & 1 and (b >> i) & 1:
-                    if i >= p + q:
-                        keep = False
-                        break
-                    if i >= p:
-                        s = -s
-            if keep:
-                C[a, b, a ^ b] = s
-    return C
-
+from cayley import dense_cayley_from_sig, dense_to_sparse_cayley, sparse_gp
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 batch, iters = 4096, 20
 
 for p, q, r in [(3, 0, 1), (4, 1, 0), (1, 3, 0)]:
-    C = build_cayley(p, q, r).to(device)
+    C = dense_cayley_from_sig(p, q, r).to(device)
     ia, ib, ic, sign = (t.to(device) for t in dense_to_sparse_cayley(C))
     n = C.shape[0]
     nnz = ia.numel()
