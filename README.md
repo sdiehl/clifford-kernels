@@ -8,7 +8,7 @@ Three implementations of the same kernel:
 
 - [**pytorch**](pytorch/) — a Triton kernel, differentiable through `torch.autograd`, with a CPU fallback
 - [**cuda-oxide**](rust/) — the same kernel written in pure Rust using [cuda-oxide](https://nvlabs.github.io/cuda-oxide/) NVidia's Rust-to-PTX compiler
-- [**mlx**](mlx/) — Apple Silicon sibling: pure MLX with `mx.compile`, plus a custom Metal kernel via `mx.fast.metal_kernel`
+- [**mlx**](mlx/) — Same but for Apple Silicon using a `mlx.compile` or a custom Metal shader kernel via `mx.fast.metal_kernel`
 
 ## License
 
