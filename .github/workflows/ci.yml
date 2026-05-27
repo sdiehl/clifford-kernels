@@ -115,5 +115,10 @@ jobs:
       - name: Install cargo-oxide
         run: cargo install --git https://github.com/NVlabs/cuda-oxide.git --rev 76a1d8840e5360207943805d036d8e299bda7728 cargo-oxide
 
+      - name: Set up libcuda driver stub
+        run: |
+          sudo ln -sf "$CUDA_PATH/lib64/stubs/libcuda.so" "$CUDA_PATH/lib64/stubs/libcuda.so.1"
+          echo "LD_LIBRARY_PATH=$CUDA_PATH/lib64/stubs:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
+
       - name: cargo oxide build
         run: cargo oxide build --features gpu
