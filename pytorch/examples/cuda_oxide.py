@@ -1,7 +1,6 @@
 # experimental: load the cuda-oxide PTX and launch via cuda-python on torch tensors.
 # requires: pip install cuda-python; cd ../rust && cargo oxide build
 import ctypes
-import re
 from pathlib import Path
 
 import torch
@@ -9,14 +8,18 @@ from cuda import cuda
 
 from cayley import sparse_cayley_from_sig
 
+# HACK: cuda-oxide mangles every #[kernel] symbol with this fixed magic prefix
+# (defined in reserved-oxide-symbols/src/lib.rs as KERNEL_PREFIX). Hardcoding it
+# until cuda-oxide exposes a stable way to query the entry name from Python.
+ENTRY = b"cuda_oxide_kernel_246e25db_sparse_gp"
+
 ptx = next(
     (Path(__file__).resolve().parent.parent.parent / "rust/target").glob("*/cayley-oxide.ptx")
 ).read_bytes()
-entry = re.search(rb"\.entry\s+(\S+sparse_gp\S*)", ptx).group(1)
 
 torch.zeros(1, device="cuda")  # ensure torch's CUDA context is current
 _, module = cuda.cuModuleLoadData(ptx + b"\0")
-_, func = cuda.cuModuleGetFunction(module, entry)
+_, func = cuda.cuModuleGetFunction(module, ENTRY)
 
 ia, ib, ic, sign = (t.cuda() for t in sparse_cayley_from_sig(3, 0, 1))
 batch, n_blades = 4, 8
