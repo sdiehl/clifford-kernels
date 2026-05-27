@@ -12,9 +12,9 @@ default = []
 gpu = ["dep:cuda-device", "dep:cuda-host", "dep:cuda-core"]
 
 [dependencies]
+cuda-core = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728", optional = true }
 cuda-device = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728", optional = true }
-cuda-host   = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728", optional = true }
-cuda-core   = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728", optional = true }
+cuda-host = { git = "https://github.com/NVlabs/cuda-oxide.git", rev = "76a1d8840e5360207943805d036d8e299bda7728", optional = true }
 
 [[bin]]
 name = "cayley-oxide"

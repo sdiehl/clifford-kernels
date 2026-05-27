@@ -1,7 +1,7 @@
 # cayley-oxide
 
-The sparse Cayley table contraction kernel written in pure Rust using [cuda-oxide](https://nvlabs.github.io/cuda-oxide/). The `#[kernel] fn sparse_gp` body in `src/main.rs` translates the Triton kernel into Rust.
-cuda-oxide is **Linux only** and needs an Ampere+ NVIDIA GPU (sm_80+) to launch kernels.
+The sparse Cayley table contraction kernel written with [cuda-oxide](https://nvlabs.github.io/cuda-oxide/). The `#[kernel] fn sparse_gp` body in `src/main.rs` translates the Triton kernel into Rust.
+cuda-oxide is Linux only and needs an sm_80+ GPU to launch kernels.
 
 Prerequisites: CUDA 12+, LLVM 21+, Clang 21+, and the pinned nightly toolchain (`rust-toolchain.toml` handles that automatically). See the [cuda-oxide installation guide](https://nvlabs.github.io/cuda-oxide/getting-started/installation.html) or use its [devcontainer](https://github.com/NVlabs/cuda-oxide/tree/main/.devcontainer).
 

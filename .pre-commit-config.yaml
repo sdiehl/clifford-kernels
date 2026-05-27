@@ -19,9 +19,14 @@ repos:
         files: ^pytorch/
   - repo: local
     hooks:
+      - id: dprint
+        name: dprint fmt (markdown + toml)
+        entry: dprint fmt
+        language: system
+        pass_filenames: false
       - id: cargo-fmt
         name: cargo fmt (rust)
-        entry: bash -c 'cd rust && cargo fmt -- --check'
+        entry: bash -c 'cd rust && cargo fmt'
         language: system
         files: ^rust/.*\.rs$
         pass_filenames: false
