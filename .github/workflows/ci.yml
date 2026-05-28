@@ -127,7 +127,7 @@ jobs:
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
 
       - name: Install CUDA Toolkit 12
-        uses: Jimver/cuda-toolkit@v0.2.19
+        uses: Jimver/cuda-toolkit@v0.2.35
         with:
           cuda: '12.5.0'
           method: 'network'
