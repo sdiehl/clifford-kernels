@@ -16,8 +16,8 @@ jobs:
       run:
         working-directory: pytorch
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v8
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
       - run: uv sync --no-install-project
@@ -34,8 +34,8 @@ jobs:
       matrix:
         python: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v8
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
           python-version: ${{ matrix.python }}
@@ -48,46 +48,30 @@ jobs:
       run:
         working-directory: pytorch
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v8
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
       - run: uv build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: pytorch/dist/
 
-  mlx-lint:
+  mlx:
     runs-on: macos-latest
     defaults:
       run:
         working-directory: mlx
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v8
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
-      - run: uv sync --no-install-project
+          python-version: "3.13"
+      - run: uv sync
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-
-  mlx-test:
-    runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: mlx
-    strategy:
-      fail-fast: false
-      matrix:
-        python: ["3.11", "3.12", "3.13"]
-    steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v8
-        with:
-          enable-cache: true
-          python-version: ${{ matrix.python }}
-      - run: uv sync
       - run: uv run pytest -q
 
   rust-test:
@@ -96,7 +80,7 @@ jobs:
       run:
         working-directory: rust
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -113,7 +97,7 @@ jobs:
     env:
       CUDA_OXIDE_LLC: /usr/bin/llc-21
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install LLVM 21 and Clang 21
         run: |
@@ -127,7 +111,7 @@ jobs:
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
 
       - name: Install CUDA Toolkit 12
-        uses: Jimver/cuda-toolkit@v0.2.19
+        uses: Jimver/cuda-toolkit@v0.2.35
         with:
           cuda: '12.5.0'
           method: 'network'

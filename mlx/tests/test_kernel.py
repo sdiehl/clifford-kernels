@@ -7,6 +7,23 @@ from cayley import metal as metal_kernel
 from cayley import pure as pure_mlx
 
 
+def _metal_atomic_float_works():
+    try:
+        x = mx.zeros((1, 2))
+        idx = mx.array([0], dtype=mx.int32)
+        sign = mx.array([1.0])
+        mx.eval(metal_kernel.sparse_gp(x, x, idx, idx, idx, sign))
+        return True
+    except Exception:
+        return False
+
+
+requires_metal_atomic = pytest.mark.skipif(
+    not _metal_atomic_float_works(),
+    reason="atomic_fetch_add on float needs Metal 3.1+ (M3 or newer)",
+)
+
+
 def _np_einsum_ref(p, q, r, batch=4, seed=0):
     mx.random.seed(seed)
     ia, ib, ic, sign = sparse_cayley_from_sig(p, q, r)
@@ -19,6 +36,7 @@ def _np_einsum_ref(p, q, r, batch=4, seed=0):
     return x, y, ia, ib, ic, sign, n_blades, expected
 
 
+@requires_metal_atomic
 @pytest.mark.parametrize(("p", "q", "r"), [(3, 0, 1), (1, 3, 0), (2, 4, 0)])
 def test_metal_matches_einsum(p, q, r):
     x, y, ia, ib, ic, sign, _, expected = _np_einsum_ref(p, q, r)
@@ -40,6 +58,7 @@ def test_pure_matches_einsum_cpu(p, q, r):
         mx.set_default_device(mx.gpu)
 
 
+@requires_metal_atomic
 @pytest.mark.parametrize(("p", "q", "r"), [(3, 0, 1), (1, 3, 0)])
 def test_metal_and_pure_agree(p, q, r):
     x, y, ia, ib, ic, sign, n_blades, _ = _np_einsum_ref(p, q, r)
