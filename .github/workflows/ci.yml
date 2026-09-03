@@ -158,11 +158,11 @@ jobs:
           host="$(rustc -vV | sed -n 's/^host: //p')"
 
           env \
+            -u RUSTFLAGS -u CARGO_BUILD_RUSTFLAGS -u CARGO_BUILD_TARGET \
             CARGO_TARGET_DIR="$target_dir" \
             CARGO_ENCODED_RUSTFLAGS="" \
             LIBRARY_PATH="$sysroot_lib${LIBRARY_PATH:+:$LIBRARY_PATH}" \
             LD_LIBRARY_PATH="$sysroot_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-            -u RUSTFLAGS -u CARGO_BUILD_RUSTFLAGS -u CARGO_BUILD_TARGET \
             cargo build --manifest-path "$codegen_crate/Cargo.toml" --lib \
               --target host-tuple --target-dir "$target_dir"
 
