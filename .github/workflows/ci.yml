@@ -96,6 +96,8 @@ jobs:
         working-directory: rust
     env:
       CUDA_OXIDE_LLC: /usr/bin/llc-21
+      # Keep in sync with the cuda-core/cuda-device/cuda-host `rev` in Cargo.toml.
+      CUDA_OXIDE_REV: 76a1d8840e5360207943805d036d8e299bda7728
     steps:
       - uses: actions/checkout@v7
 
@@ -129,7 +131,44 @@ jobs:
           key: cuda-oxide-build
 
       - name: Install cargo-oxide
-        run: cargo install --git https://github.com/NVlabs/cuda-oxide.git --rev 76a1d8840e5360207943805d036d8e299bda7728 cargo-oxide
+        run: cargo install --git https://github.com/NVlabs/cuda-oxide.git --rev "$CUDA_OXIDE_REV" cargo-oxide
+
+      # cargo-oxide's own backend discovery falls back to a shallow clone of
+      # cuda-oxide's `main` branch (unpinned) whenever no CUDA_OXIDE_BACKEND
+      # override, project config, or fresh cache is present -- see
+      # https://github.com/NVlabs/cuda-oxide/blob/main/crates/cargo-oxide/src/backend.rs.
+      # The GitHub Actions cache for this job expires after 7 days of no
+      # access, so any week without a rust-build run silently re-fetches
+      # `main` HEAD and can pick up a breaking change upstream. Building the
+      # backend ourselves from the same pinned rev as Cargo.lock and pointing
+      # CUDA_OXIDE_BACKEND at it (highest-precedence override) makes the
+      # build fully reproducible.
+      - name: Build pinned codegen backend
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/cuda-oxide-pinned
+          git init -q /tmp/cuda-oxide-pinned
+          git -C /tmp/cuda-oxide-pinned remote add origin https://github.com/NVlabs/cuda-oxide.git
+          git -C /tmp/cuda-oxide-pinned fetch --depth 1 origin "$CUDA_OXIDE_REV"
+          git -C /tmp/cuda-oxide-pinned checkout -q FETCH_HEAD
+
+          codegen_crate=/tmp/cuda-oxide-pinned/crates/rustc-codegen-cuda
+          target_dir="$codegen_crate/target"
+          sysroot_lib="$(rustc --print sysroot)/lib"
+          host="$(rustc -vV | sed -n 's/^host: //p')"
+
+          env \
+            CARGO_TARGET_DIR="$target_dir" \
+            CARGO_ENCODED_RUSTFLAGS="" \
+            LIBRARY_PATH="$sysroot_lib${LIBRARY_PATH:+:$LIBRARY_PATH}" \
+            LD_LIBRARY_PATH="$sysroot_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            -u RUSTFLAGS -u CARGO_BUILD_RUSTFLAGS -u CARGO_BUILD_TARGET \
+            cargo build --manifest-path "$codegen_crate/Cargo.toml" --lib \
+              --target host-tuple --target-dir "$target_dir"
+
+          so_path="$target_dir/$host/debug/librustc_codegen_cuda.so"
+          test -f "$so_path"
+          echo "CUDA_OXIDE_BACKEND=$so_path" >> "$GITHUB_ENV"
 
       - name: Set up libcuda driver stub
         run: |
