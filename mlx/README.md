@@ -9,14 +9,16 @@ uv run pytest
 
 ```python
 import mlx.core as mx
-from cayley import sparse_cayley_from_sig
+from cayley_mlx import sparse_cayley_from_sig
+from cayley_mlx.metal import sparse_gp
 
 ia, ib, ic, sign = sparse_cayley_from_sig(3, 0, 1)
 x = mx.random.normal((32, 16))
 y = mx.random.normal((32, 16))
+out = sparse_gp(x, y, ia, ib, ic, sign)
 ```
 
-The Metal kernel uses `atomic_fetch_add_explicit` on float, which requires Metal 3.1+ (Apple GPU family M3 and later). On M1/M2 it will fail to compile.
+`cayley_mlx.metal` is a Metal kernel with one thread per batch row accumulating into registers, differentiable through a custom VJP that reuses the kernel with permuted indices. `cayley_mlx.pure` is the same contraction as an MLX scatter-add that works under `mx.compile`.
 
 ## License
 

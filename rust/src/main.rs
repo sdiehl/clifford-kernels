@@ -2,8 +2,7 @@
 mod gpu {
     use cayley_oxide::{reference, sig};
     use cuda_core::{CudaContext, DeviceBuffer, LaunchConfig};
-    use cuda_device::atomic::{AtomicOrdering, DeviceAtomicF32};
-    use cuda_device::{cuda_module, kernel, thread};
+    use cuda_device::{DisjointSlice, cuda_module, kernel, thread};
 
     #[cuda_module]
     mod kernels {
@@ -13,7 +12,7 @@ mod gpu {
         pub fn sparse_gp(
             x: &[f32],
             y: &[f32],
-            out: &[f32],
+            mut out: DisjointSlice<f32>,
             ia: &[i32],
             ib: &[i32],
             ic: &[i32],
@@ -32,10 +31,9 @@ mod gpu {
                 let a = ia[k] as usize;
                 let bb = ib[k] as usize;
                 let cc = ic[k] as usize;
-                let s = sign[k];
-                let prod = s * x[row + a] * y[row + bb];
-                let slot = unsafe { &*(out.as_ptr().add(row + cc) as *const DeviceAtomicF32) };
-                slot.fetch_add(prod, AtomicOrdering::Relaxed);
+                let prod = sign[k] * x[row + a] * y[row + bb];
+                // SAFETY: thread b exclusively owns out[row..row + n_blades] and cc < n_blades.
+                unsafe { *out.get_unchecked_mut(row + cc) += prod };
                 k += 1;
             }
         }
@@ -60,7 +58,7 @@ mod gpu {
 
         let x_dev = DeviceBuffer::from_host(&stream, &x_host).unwrap();
         let y_dev = DeviceBuffer::from_host(&stream, &y_host).unwrap();
-        let out_dev = DeviceBuffer::<f32>::zeroed(&stream, batch * n_blades).unwrap();
+        let mut out_dev = DeviceBuffer::<f32>::zeroed(&stream, batch * n_blades).unwrap();
 
         let ia_dev = DeviceBuffer::from_host(&stream, &c.ia).unwrap();
         let ib_dev = DeviceBuffer::from_host(&stream, &c.ib).unwrap();
@@ -75,7 +73,7 @@ mod gpu {
                 cfg,
                 &x_dev,
                 &y_dev,
-                &out_dev,
+                &mut out_dev,
                 &ia_dev,
                 &ib_dev,
                 &ic_dev,
@@ -109,8 +107,8 @@ mod gpu {
             &out_host[..n_blades.min(8)]
         );
 
-        let dx_dev = DeviceBuffer::<f32>::zeroed(&stream, batch * n_blades).unwrap();
-        let dy_dev = DeviceBuffer::<f32>::zeroed(&stream, batch * n_blades).unwrap();
+        let mut dx_dev = DeviceBuffer::<f32>::zeroed(&stream, batch * n_blades).unwrap();
+        let mut dy_dev = DeviceBuffer::<f32>::zeroed(&stream, batch * n_blades).unwrap();
         let dout_dev = DeviceBuffer::from_host(&stream, &vec![1.0f32; batch * n_blades]).unwrap();
 
         module
@@ -119,7 +117,7 @@ mod gpu {
                 cfg,
                 &y_dev,
                 &dout_dev,
-                &dx_dev,
+                &mut dx_dev,
                 &ib_dev,
                 &ic_dev,
                 &ia_dev,
@@ -134,7 +132,7 @@ mod gpu {
                 cfg,
                 &x_dev,
                 &dout_dev,
-                &dy_dev,
+                &mut dy_dev,
                 &ia_dev,
                 &ic_dev,
                 &ib_dev,

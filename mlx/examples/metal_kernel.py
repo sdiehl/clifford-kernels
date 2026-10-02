@@ -1,7 +1,7 @@
 import mlx.core as mx
 
-from cayley import sparse_cayley_from_sig
-from cayley.metal import sparse_gp
+from cayley_mlx import sparse_cayley_from_sig
+from cayley_mlx.metal import sparse_gp
 
 ia, ib, ic, sign = sparse_cayley_from_sig(3, 0, 1)
 x = mx.random.normal((4, 16))

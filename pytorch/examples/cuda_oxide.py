@@ -1,25 +1,33 @@
 # experimental: load the cuda-oxide PTX and launch via cuda-python on torch tensors.
-# requires: pip install cuda-python; cd ../rust && cargo oxide build
+# requires: pip install "cuda-python>=12.6"; cd ../rust && cargo oxide build
 import ctypes
 from pathlib import Path
 
 import torch
-from cuda import cuda
+from cuda.bindings import driver
 
-from cayley import sparse_cayley_from_sig
+from cayley_torch import sparse_cayley_from_sig
 
 # HACK: cuda-oxide mangles every #[kernel] symbol with this fixed magic prefix
 # (defined in reserved-oxide-symbols/src/lib.rs as KERNEL_PREFIX). Hardcoding it
 # until cuda-oxide exposes a stable way to query the entry name from Python.
 ENTRY = b"cuda_oxide_kernel_246e25db_sparse_gp"
 
+
+def check(result):
+    err, *rest = result
+    if err != driver.CUresult.CUDA_SUCCESS:
+        raise RuntimeError(f"CUDA driver error: {err}")
+    return rest[0] if len(rest) == 1 else rest
+
+
 ptx = next(
     (Path(__file__).resolve().parent.parent.parent / "rust/target").glob("*/cayley-oxide.ptx")
 ).read_bytes()
 
 torch.zeros(1, device="cuda")  # ensure torch's CUDA context is current
-_, module = cuda.cuModuleLoadData(ptx + b"\0")
-_, func = cuda.cuModuleGetFunction(module, ENTRY)
+module = check(driver.cuModuleLoadData(ptx + b"\0"))
+func = check(driver.cuModuleGetFunction(module, ENTRY))
 
 ia, ib, ic, sign = (t.cuda() for t in sparse_cayley_from_sig(3, 0, 1))
 batch, n_blades = 4, 8
@@ -27,7 +35,7 @@ x = torch.randn(batch, n_blades, device="cuda")
 y = torch.randn(batch, n_blades, device="cuda")
 out = torch.zeros_like(x)
 
-# cuda-oxide ABI: each `&[T]` slice is (ptr u64, len u64); then n_blades u32, batch u32.
+# cuda-oxide ABI: each `&[T]` and `DisjointSlice<T>` is (ptr u64, len u64); then n_blades u32, batch u32.
 vals = []
 for t in [x, y, out, ia, ib, ic, sign]:
     vals += [ctypes.c_uint64(t.data_ptr()), ctypes.c_uint64(t.numel())]
@@ -36,7 +44,8 @@ ptrs = (ctypes.c_void_p * len(vals))(*[ctypes.addressof(v) for v in vals])
 
 block = 64
 grid = (batch + block - 1) // block
-cuda.cuLaunchKernel(func, grid, 1, 1, block, 1, 1, 0, 0, ptrs, 0)
+stream = torch.cuda.current_stream().cuda_stream
+check(driver.cuLaunchKernel(func, grid, 1, 1, block, 1, 1, 0, stream, ptrs, 0))
 torch.cuda.synchronize()
 
 print(out[0])

@@ -4,9 +4,9 @@ Sparse [Cayley table](https://en.wikipedia.org/wiki/Cayley_table) contraction ke
 
 This class of transformers are useful in some applications where the underlying training data exists uniformly on some higher dimensional manifold with particular types of physical symmetries encoded by the algebra. Because the geometric product is the native operation of the algebra, these networks naturally encode geometric symmetries, spatial relationships, and coordinate-free transformations directly into self-attention, rather than learning them approximately from data. Architectures in this family natively respect groups like $`\mathrm{E}(n)`$ and $`\mathrm{SE}(n)`$ without expensive custom coordinate transforms, since the geometric product $`ab = a \cdot b + a \wedge b`$ captures both feature coherence (inner product $`a \cdot b`$) and rotational structure (outer product $`a \wedge b`$) in one operation, which lets them reach state-of-the-art accuracy on spatial and physical tasks with far fewer parameters. This shows up in some molecular force prediction, HEP jet-tagging, and robotics applications.
 
-- [**pytorch**](pytorch/) — a Triton kernel, differentiable through `torch.autograd`, with a CPU fallback
-- [**cuda-oxide**](rust/) — the same kernel written in pure Rust using [cuda-oxide](https://nvlabs.github.io/cuda-oxide/) NVidia's Rust-to-PTX compiler
-- [**mlx**](mlx/) — Same but for Apple Silicon using a `mlx.compile` or a Metal shader kernel
+- [**pytorch**](pytorch/): a Triton kernel, differentiable through `torch.autograd`, with a CPU fallback
+- [**cuda-oxide**](rust/): the same kernel written in pure Rust using [cuda-oxide](https://nvlabs.github.io/cuda-oxide/) NVidia's Rust-to-PTX compiler
+- [**mlx**](mlx/): Same but for Apple Silicon using a `mlx.compile` or a Metal shader kernel
 
 ## License
 

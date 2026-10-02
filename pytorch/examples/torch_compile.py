@@ -1,6 +1,6 @@
 import torch
 
-from cayley import sparse_cayley_from_sig, sparse_gp
+from cayley_torch import sparse_cayley_from_sig, sparse_gp
 
 ia, ib, ic, sign = sparse_cayley_from_sig(3, 0, 1)
 gp = torch.compile(sparse_gp, fullgraph=True)

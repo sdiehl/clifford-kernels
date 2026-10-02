@@ -1,6 +1,6 @@
 import torch
 
-from cayley import dense_cayley_from_sig, dense_to_sparse_cayley, sparse_gp
+from cayley_torch import dense_cayley_from_sig, dense_to_sparse_cayley, sparse_gp
 
 C = dense_cayley_from_sig(3, 0, 1)
 ia, ib, ic, sign = dense_to_sparse_cayley(C)

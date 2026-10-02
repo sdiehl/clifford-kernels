@@ -1,7 +1,6 @@
 from collections.abc import Iterator
 
 import mlx.core as mx
-import numpy as np
 
 
 def _popcount(n: int) -> int:
@@ -65,7 +64,5 @@ def sparse_cayley_from_sig(
 
 def dense_cayley_from_sig(p: int, q: int, r: int = 0, *, dtype: mx.Dtype = mx.float32) -> mx.array:
     n = 1 << (p + q + r)
-    arr = np.zeros((n, n, n), dtype=np.float32)
-    for a, b, c, s in _cayley_entries(p, q, r):
-        arr[a, b, c] = s
-    return mx.array(arr, dtype=dtype)
+    ia, ib, ic, sign = sparse_cayley_from_sig(p, q, r, dtype=dtype)
+    return mx.zeros((n, n, n), dtype=dtype).at[ia, ib, ic].add(sign)

@@ -9,7 +9,7 @@ updates:
       python-dev:
         patterns: ["pytest", "ruff", "pre-commit"]
       python-runtime:
-        patterns: ["torch", "triton", "jaxtyping"]
+        patterns: ["torch"]
 
   - package-ecosystem: "uv"
     directory: "/mlx"
