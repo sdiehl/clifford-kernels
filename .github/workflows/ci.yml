@@ -89,7 +89,7 @@ jobs:
       - run: cargo test --lib --tests
 
   rust-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: rust-test
     defaults:
       run:
